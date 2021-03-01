@@ -7,4 +7,6 @@ public interface IRsService {
     RestResult<Object> setResource(String status, Long acTime, String name);
 
     RestResult<Object> getResource(String status);
+
+    RestResult<Object> updateResource(String status, Long acTime, String name);
 }

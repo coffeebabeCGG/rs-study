@@ -14,7 +14,7 @@ import javax.annotation.Resource;
  * @author cgg
  */
 
-@RestController(value = "/rs")
+@RestController
 @Api(tags = "resource interface")
 public class RsController {
 
@@ -42,6 +42,20 @@ public class RsController {
     })
     public RestResult<Object> getResource(@RequestParam(value = "status") String status) {
         return iRsService.getResource(status);
+    }
+
+    @PatchMapping(value = "/resource")
+    @ApiOperation("update resource")
+    @ApiImplicitParams({
+
+            @ApiImplicitParam(name = "status", value = "status", paramType = "update", required = true),
+            @ApiImplicitParam(name = "acTime", value = "acTime", paramType = "update", required = false),
+            @ApiImplicitParam(name = "name", value = "name", paramType = "update", required = false)
+    })
+    public RestResult<Object> updateResource(@RequestParam(value = "status") String status,
+                                             @RequestParam(value = "acTime") Long acTime,
+                                             @RequestParam(value = "name") String name) {
+        return iRsService.updateResource(status, acTime, name);
     }
 
 }
