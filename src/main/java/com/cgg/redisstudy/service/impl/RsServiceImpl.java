@@ -8,6 +8,8 @@ import com.cgg.redisstudy.entity.ZkStudy;
 import com.cgg.redisstudy.exception.RsException;
 import com.cgg.redisstudy.service.IRsService;
 import com.cgg.redisstudy.utils.UuidUtil;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
@@ -17,6 +19,7 @@ import java.util.Date;
 import java.util.List;
 
 @Service
+@Slf4j
 public class RsServiceImpl implements IRsService {
 
     @Resource
@@ -24,6 +27,9 @@ public class RsServiceImpl implements IRsService {
 
     @Resource
     private RsCache rsCache;
+
+    @Resource
+    private Environment environment;
 
     @Override
 //    @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -39,6 +45,7 @@ public class RsServiceImpl implements IRsService {
 
     @Override
     public RestResult<Object> getResource(String status) {
+        log.info("start search resource");
         List<ZkStudy> cacheResource = rsCache.getByKey("rs_study", ZkStudy.class);
         if (ObjectUtils.isEmpty(cacheResource)) {
             List<ZkStudy> list = zkStudyRepository.findAll();
@@ -50,9 +57,22 @@ public class RsServiceImpl implements IRsService {
 
     @Override
     public RestResult<Object> updateResource(String status, Long acTime, String name) {
-        rsCache.delete("rs_study");
         int count = zkStudyRepository.updateResource(status, new Date(acTime), name);
+        rsCache.delete("rs_study");
         return RestResult.success(count);
+    }
+
+    @Override
+    public RestResult<Object> getSetResource(String status) {
+        log.info("start search set resource");
+        List<ZkStudy> cacheResource = rsCache.getByKey("rs_study", ZkStudy.class);
+        if (ObjectUtils.isEmpty(cacheResource)) {
+            List<ZkStudy> list = zkStudyRepository.findAll();
+            rsCache.store("rs_study", list);
+            return RestResult.success(list);
+        }
+        return RestResult.success(cacheResource);
+
     }
 
 

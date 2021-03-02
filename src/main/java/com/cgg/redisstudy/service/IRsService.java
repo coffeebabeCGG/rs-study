@@ -9,4 +9,6 @@ public interface IRsService {
     RestResult<Object> getResource(String status);
 
     RestResult<Object> updateResource(String status, Long acTime, String name);
+
+    RestResult<Object> getSetResource(String status);
 }
