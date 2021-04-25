@@ -40,8 +40,9 @@ public class RsController {
     @ApiImplicitParams({
             @ApiImplicitParam(name = "status", value = "status", paramType = "query", required = false)
     })
-    public RestResult<Object> getResource(@RequestParam(value = "status") String status) {
-        return iRsService.getResource(status);
+    public RestResult<Object> getResource(@RequestParam(value = "status") String status,
+                                          @RequestParam(value = "userId") Long userId) {
+        return iRsService.getResource(status, userId);
     }
 
     @PatchMapping(value = "/resource")

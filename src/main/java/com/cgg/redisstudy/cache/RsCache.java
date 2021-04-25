@@ -3,17 +3,16 @@ package com.cgg.redisstudy.cache;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.connection.BitFieldSubCommands;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.util.ObjectUtils;
 
 import javax.annotation.Resource;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -27,6 +26,9 @@ public class RsCache {
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
 
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
+
     /**
      * 存储
      */
@@ -38,6 +40,83 @@ public class RsCache {
         redisTemplate.opsForHash().putAll(genKey(key, 1L), map);
         redisTemplate.expire(genKey(key, 1L), seconds, TimeUnit.SECONDS);
         log.info("redis key:" + genKey(key, 1L) + " expire time seconds:" + seconds);
+    }
+
+    public void setBitMaps(String dateKey, Long userId, boolean isLogin) {
+        stringRedisTemplate.opsForValue().setBit(dateKey, userId, isLogin);
+    }
+
+    public boolean getBitMaps(String dateKey, Long userId, boolean isLogin) {
+        return stringRedisTemplate.opsForValue().getBit(dateKey, userId);
+    }
+
+    //统计某一天日活量
+    public int activeCountOfDay(String dateKey) {
+        String value = stringRedisTemplate.opsForValue().get(dateKey);
+        if (ObjectUtils.isEmpty(value)) {
+            return 0;
+        }
+        return BitSet.valueOf(value.getBytes()).cardinality();
+    }
+
+    //统计某一时间段连续登录的用户量
+    public int activeUserCountOfPeriodTime(int day) {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        Calendar dateStr = Calendar.getInstance();
+        String[] value = new String[day];
+        for (int i = 0; i < day; i++) {
+            value[i] = simpleDateFormat.format(dateStr.getTime());
+            dateStr.set(Calendar.DAY_OF_MONTH, dateStr.get(Calendar.DAY_OF_MONTH) -1);
+        }
+        return uniqueCounts(value);
+    }
+
+    //统计某一时间段日活量
+    public int activeCountOfPeriodTime(int day) {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        int totalCount = 0;
+        Calendar dateStr = Calendar.getInstance();
+        for (int i = 0; i <= day; i++) {
+            totalCount += activeCountOfDay(simpleDateFormat.format(dateStr.getTime()));
+            dateStr.set(Calendar.DAY_OF_MONTH, dateStr.get(Calendar.DAY_OF_MONTH) -1);
+        }
+        return totalCount;
+    }
+
+
+
+    //bitmaps求并集
+    private int uniqueCounts(String... dateKey) {
+        BitSet all = new BitSet();
+        for (int i = 0; i < dateKey.length; i++) {
+            String value = stringRedisTemplate.opsForValue().get(dateKey[i]);
+            if (ObjectUtils.isEmpty(value)) {
+                break;
+            }
+            BitSet bitSet = BitSet.valueOf(value.getBytes());
+            if (i == 0) {
+                all = bitSet;
+            }
+            all.and(bitSet);
+        }
+        return all.cardinality();
+    }
+
+    //bitmaps求或集
+    private int orCounts(String... dateKey) {
+        BitSet all = new BitSet();
+        for (int i = 0; i < dateKey.length; i++) {
+            String value = stringRedisTemplate.opsForValue().get(dateKey[i]);
+            if (ObjectUtils.isEmpty(value)) {
+                break;
+            }
+            BitSet bitSet = BitSet.valueOf(value.getBytes());
+            if (i == 0) {
+                all = bitSet;
+            }
+            all.or(bitSet);
+        }
+        return all.cardinality();
     }
 
     /**

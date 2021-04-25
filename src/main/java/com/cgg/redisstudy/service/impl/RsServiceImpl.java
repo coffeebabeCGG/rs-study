@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 
 import javax.annotation.Resource;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
@@ -44,9 +45,15 @@ public class RsServiceImpl implements IRsService {
     }
 
     @Override
-    public RestResult<Object> getResource(String status) {
+    public RestResult<Object> getResource(String status, Long userId) {
         log.info("start search resource");
         List<ZkStudy> cacheResource = rsCache.getByKey("rs_study", ZkStudy.class);
+        //使用bitmaps统计接口操作日活
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        rsCache.setBitMaps(simpleDateFormat.format(new Date()), userId, true);
+        System.out.println("今天的日活量：" + rsCache.activeCountOfDay(simpleDateFormat.format(new Date())));
+        System.out.println("七天的总日活量：" + rsCache.activeCountOfPeriodTime(7));
+        System.out.println("连续七天登录的用户数：" + rsCache.activeUserCountOfPeriodTime(7));
         if (ObjectUtils.isEmpty(cacheResource)) {
             List<ZkStudy> list = zkStudyRepository.findAll();
             rsCache.store("rs_study", list);
